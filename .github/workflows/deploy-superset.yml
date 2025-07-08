@@ -184,6 +184,7 @@ jobs:
 
     - name: Run Ansible Playbook
       run: |
+        cat .vault_pass
         make check-syntax-playbooks
         make deploy-superset
 
