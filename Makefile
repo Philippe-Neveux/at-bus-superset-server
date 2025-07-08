@@ -1,5 +1,5 @@
 install-collections:
-	ansible-galaxy collection install -r requirements.yml
+	uv run ansible-galaxy collection install -r requirements.yml
 
 check-syntax-playbooks:
 	uv run ansible-playbook --syntax-check -i inventory/hosts.yml playbooks/deploy.yml
