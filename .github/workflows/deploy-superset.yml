@@ -184,7 +184,7 @@ jobs:
 
     - name: Run Ansible Playbook
       env:
-        ANSIBLE_VAULT_PASSWORD_FILE: /home/runner/.vault_pass
+        # ANSIBLE_VAULT_PASSWORD_FILE: /home/runner/.vault_pass
       run: |
         make check-syntax-playbooks
         make deploy-superset
