@@ -186,6 +186,7 @@ jobs:
       run: |
         cat .vault_pass
         make check-syntax-playbooks
+        uv run ansible-vault view inventory/group_vars/all/vault.yml --vault-password-file .vault_pass
         make deploy-superset
 
     - name: Verify Deployment
