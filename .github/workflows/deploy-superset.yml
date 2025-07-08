@@ -180,14 +180,12 @@ jobs:
 
     - name: Create vault password file
       run: |
-        echo "echo ${{ secrets.VAULT_PASSWORD }}" > /home/runner/.vault_pass
+        echo "${{ secrets.VAULT_PASSWORD }}" > /home/runner/.vault_pass
 
     - name: Run Ansible Playbook
-      env:
-        # ANSIBLE_VAULT_PASSWORD_FILE: /home/runner/.vault_pass
       run: |
-        make check-syntax-playbooks
-        make deploy-superset
+        make check-syntax-playbooks VAULT_PASS_FILE=/home/runner/.vault_pass
+        make deploy-superset VAULT_PASS_FILE=/home/runner/.vault_pass
 
     - name: Verify Deployment
       run: |
