@@ -86,7 +86,7 @@ jobs:
         echo "Waiting for VM to be fully initialized..."
         sleep 30
 
-  deploy-airflow:
+  deploy-superset:
     runs-on: ubuntu-latest
     needs: setup-gcp-vm
 
