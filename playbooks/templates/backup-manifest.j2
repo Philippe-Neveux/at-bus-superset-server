@@ -1,0 +1,48 @@
+# Superset Backup Manifest
+# Generated on: {{ ansible_date_time.iso8601 }}
+
+## Backup Information
+- Backup Timestamp: {{ backup_timestamp }}
+- Server: {{ ansible_hostname }}
+- Ansible User: {{ ansible_user }}
+- Superset Version: {{ superset_version }}
+
+## Backup Contents
+1. PostgreSQL Data: postgres-data.tar.gz
+   - Database: {{ postgres_db }}
+   - User: {{ postgres_user }}
+   - Data Directory: {{ postgres_data_dir }}
+
+2. Redis Data: redis-data.tar.gz
+   - Host: {{ redis_host | default('redis') }}
+   - Port: {{ redis_port }}
+   - Data Directory: {{ redis_data_dir }}
+
+3. Superset Configuration: superset_config.py
+   - Configuration Path: {{ superset_env_vars.SUPERSET_CONFIG_PATH }}
+
+4. Docker Compose Configuration: docker-compose.yml
+   - Project Directory: {{ superset_install_dir }}
+
+5. Environment Variables: .env
+   - Contains all environment variables for the deployment
+
+## Deployment Information
+- Installation Directory: {{ superset_install_dir }}
+- Data Directory: {{ superset_data_dir }}
+- Logs Directory: {{ superset_logs_dir }}
+- Superset Port: {{ superset_port }}
+- PostgreSQL Port: {{ postgres_port }}
+- Redis Port: {{ redis_port }}
+
+## Admin User Information
+- Username: {{ superset_admin_user }}
+- Email: {{ superset_admin_email }}
+- First Name: {{ superset_admin_firstname }}
+- Last Name: {{ superset_admin_lastname }}
+
+## Notes
+- This backup was created using Ansible
+- To restore, use the restore.yml playbook
+- Default credentials should be changed after restore
+- Backup retention: {{ backup_retention_days }} days 

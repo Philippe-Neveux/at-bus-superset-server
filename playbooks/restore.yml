@@ -1,0 +1,138 @@
+---
+- name: Restore Superset from Backup
+  hosts: superset_servers
+  become: yes
+  gather_facts: yes
+  
+  vars_files:
+    - group_vars/all.yml
+
+  vars:
+    # This should be set to the backup directory to restore from
+    # Example: backup_to_restore: "superset-backup-2024-01-15T10-30-00"
+    backup_to_restore: ""
+
+  tasks:
+    - name: Validate backup directory parameter
+      fail:
+        msg: "Please set the 'backup_to_restore' variable to specify which backup to restore from"
+      when: backup_to_restore == ""
+
+    - name: Check if backup directory exists
+      stat:
+        path: "{{ backup_dir }}/{{ backup_to_restore }}"
+      register: backup_check
+
+    - name: Fail if backup directory doesn't exist
+      fail:
+        msg: "Backup directory {{ backup_dir }}/{{ backup_to_restore }} does not exist"
+      when: not backup_check.stat.exists
+
+    - name: Stop Superset services
+      community.docker.docker_compose_v2:
+        project_src: "{{ superset_install_dir }}"
+        state: absent
+      ignore_errors: yes
+
+    - name: Remove existing data directories
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ postgres_data_dir }}"
+        - "{{ redis_data_dir }}"
+
+    - name: Recreate data directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+      loop:
+        - "{{ postgres_data_dir }}"
+        - "{{ redis_data_dir }}"
+
+    - name: Restore PostgreSQL data
+      unarchive:
+        src: "{{ backup_dir }}/{{ backup_to_restore }}/postgres-data.tar.gz"
+        dest: "{{ superset_data_dir }}"
+        remote_src: yes
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Restore Redis data
+      unarchive:
+        src: "{{ backup_dir }}/{{ backup_to_restore }}/redis-data.tar.gz"
+        dest: "{{ superset_data_dir }}"
+        remote_src: yes
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Restore Superset configuration
+      copy:
+        src: "{{ backup_dir }}/{{ backup_to_restore }}/superset_config.py"
+        dest: "{{ superset_install_dir }}/superset_config.py"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        backup: yes
+
+    - name: Restore Docker Compose file
+      copy:
+        src: "{{ backup_dir }}/{{ backup_to_restore }}/docker-compose.yml"
+        dest: "{{ superset_install_dir }}/docker-compose.yml"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        backup: yes
+
+    - name: Restore environment file
+      copy:
+        src: "{{ backup_dir }}/{{ backup_to_restore }}/.env"
+        dest: "{{ superset_install_dir }}/.env"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        backup: yes
+
+    - name: Start Superset services
+      community.docker.docker_compose_v2:
+        project_src: "{{ superset_install_dir }}"
+        state: present
+        build: never
+
+    - name: Wait for services to be ready
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: "{{ superset_port }}"
+        delay: 10
+        timeout: 300
+
+    - name: Verify Superset is running
+      uri:
+        url: "http://{{ ansible_host }}:{{ superset_port }}/health"
+        method: GET
+        status_code: 200
+      register: health_check
+      retries: 5
+      delay: 10
+      until: health_check.status == 200
+
+    - name: Display restore information
+      debug:
+        msg: |
+          ========================================
+          Superset Restore Completed Successfully!
+          ========================================
+          
+          Restored from: {{ backup_dir }}/{{ backup_to_restore }}
+          Access URL: http://{{ ansible_host }}:{{ superset_port }}
+          
+          Installation Directory: {{ superset_install_dir }}
+          Data Directory: {{ superset_data_dir }}
+          Logs Directory: {{ superset_logs_dir }}
+          
+          ========================================
+          IMPORTANT: Verify your data and credentials!
+          ======================================== 

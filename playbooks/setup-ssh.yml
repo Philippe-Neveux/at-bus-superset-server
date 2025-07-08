@@ -1,0 +1,59 @@
+---
+- name: Setup SSH Keys for VM Connection
+  hosts: localhost
+  gather_facts: no
+  vars:
+    ssh_key_name: "at-bus-superset-key"
+    ssh_key_path: "~/.ssh/{{ ssh_key_name }}"
+    target_user: "at-bus-superset"
+    target_host: "34.151.111.45"
+    target_port: "22"
+
+  tasks:
+    - name: Check if SSH key already exists
+      stat:
+        path: "{{ ssh_key_path }}"
+      register: ssh_key_file
+
+    - name: Generate SSH key pair
+      command: ssh-keygen -t rsa -b 4096 -C "ansible@at-bus-superset" -f {{ ssh_key_path }} -N ""
+      args:
+        creates: "{{ ssh_key_path }}"
+      when: not ssh_key_file.stat.exists
+
+    - name: Set SSH key permissions
+      file:
+        path: "{{ ssh_key_path }}"
+        mode: '0600'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Set SSH public key permissions
+      file:
+        path: "{{ ssh_key_path }}.pub"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Display SSH key information
+      debug:
+        msg: |
+          SSH Key generated successfully!
+          
+          Private Key: {{ ssh_key_path }}
+          Public Key: {{ ssh_key_path }}.pub
+          
+          To copy the public key to your VM, run:
+          ssh-copy-id -i {{ ssh_key_path }}.pub {{ target_user }}@{{ target_host }}
+          
+          Or manually copy the content of {{ ssh_key_path }}.pub to:
+          /home/{{ target_user }}/.ssh/authorized_keys on your VM
+
+    - name: Read public key content
+      slurp:
+        src: "{{ ssh_key_path }}.pub"
+      register: public_key_content
+
+    - name: Display public key
+      debug:
+        msg: "Public Key Content: {{ public_key_content.content | b64decode }}" 

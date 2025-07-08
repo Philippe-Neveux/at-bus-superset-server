@@ -1,0 +1,116 @@
+---
+- name: Backup Superset Data and Configuration
+  hosts: superset_servers
+  become: yes
+  gather_facts: yes
+  
+  vars_files:
+    - group_vars/all.yml
+
+  tasks:
+    - name: Create backup directory with timestamp
+      set_fact:
+        backup_timestamp: "{{ ansible_date_time.iso8601 | regex_replace(':', '-') | regex_replace('\\.', '-') }}"
+        backup_path: "{{ backup_dir }}/superset-backup-{{ backup_timestamp }}"
+
+    - name: Create backup directory
+      file:
+        path: "{{ backup_path }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Stop Superset services for backup
+      community.docker.docker_compose_v2:
+        project_src: "{{ superset_install_dir }}"
+        state: absent
+      ignore_errors: yes
+
+    - name: Backup PostgreSQL data
+      archive:
+        path: "{{ postgres_data_dir }}"
+        dest: "{{ backup_path }}/postgres-data.tar.gz"
+        format: gz
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Backup Redis data
+      archive:
+        path: "{{ redis_data_dir }}"
+        dest: "{{ backup_path }}/redis-data.tar.gz"
+        format: gz
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Backup Superset configuration
+      copy:
+        src: "{{ superset_install_dir }}/superset_config.py"
+        dest: "{{ backup_path }}/superset_config.py"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Backup Docker Compose file
+      copy:
+        src: "{{ superset_install_dir }}/docker-compose.yml"
+        dest: "{{ backup_path }}/docker-compose.yml"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Backup environment file
+      copy:
+        src: "{{ superset_install_dir }}/.env"
+        dest: "{{ backup_path }}/.env"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Create backup manifest
+      template:
+        src: templates/backup-manifest.j2
+        dest: "{{ backup_path }}/backup-manifest.txt"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Restart Superset services
+      community.docker.docker_compose_v2:
+        project_src: "{{ superset_install_dir }}"
+        state: present
+        build: never
+
+    - name: Clean up old backups
+      find:
+        paths: "{{ backup_dir }}"
+        patterns: "superset-backup-*"
+        age: "{{ backup_retention_days }}d"
+      register: old_backups
+
+    - name: Remove old backups
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_backups.files }}"
+      when: old_backups.files | length > 0
+
+    - name: Display backup information
+      debug:
+        msg: |
+          ========================================
+          Superset Backup Completed Successfully!
+          ========================================
+          
+          Backup Location: {{ backup_path }}
+          Backup Size: {{ ansible_facts.get('ansible_memtotal_mb', 'Unknown') }} MB
+          Timestamp: {{ backup_timestamp }}
+          
+          Backup Contents:
+          - PostgreSQL data
+          - Redis data
+          - Superset configuration
+          - Docker Compose configuration
+          - Environment variables
+          
+          ======================================== 

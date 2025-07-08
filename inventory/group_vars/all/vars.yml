@@ -1,0 +1,89 @@
+# Superset Deployment Configuration
+# =================================
+
+# Installation Directories
+superset_install_dir: /opt/superset
+superset_data_dir: /opt/superset/data
+superset_logs_dir: /opt/superset/logs
+
+# Superset Version and Images
+superset_version: "5.0.0"
+superset_image: "apache/superset:{{ superset_version }}-dev"
+superset_init_image: "apache/superset:{{ superset_version }}-dev"
+
+# Database Configuration (using vault variables)
+postgres_image: "postgres:15"
+postgres_user: "{{ vault_postgres_user }}"
+postgres_password: "{{ vault_postgres_password }}"
+postgres_db: "{{ vault_postgres_db }}"
+postgres_port: "5432"
+postgres_data_dir: "{{ superset_data_dir }}/postgres"
+
+# Redis Configuration
+redis_image: "redis:7-alpine"
+redis_port: "6379"
+redis_data_dir: "{{ superset_data_dir }}/redis"
+
+# Superset Application Configuration (using vault variables)
+superset_port: "8088"
+superset_secret_key: "{{ vault_superset_secret_key }}"
+superset_admin_user: "{{ vault_superset_admin_user }}"
+superset_admin_password: "{{ vault_superset_admin_password }}"
+superset_admin_email: "{{ vault_superset_admin_email }}"
+superset_admin_firstname: "{{ vault_superset_admin_firstname }}"
+superset_admin_lastname: "{{ vault_superset_admin_lastname }}"
+
+# Load example data (set to false for production)
+superset_load_examples: true
+
+# Environment Variables (using vault variables)
+superset_env_vars:
+  SUPERSET_LOAD_EXAMPLES: "{{ 'true' if superset_load_examples else 'false' }}"
+  SUPERSET_SECRET_KEY: "{{ vault_superset_secret_key }}"
+  SUPERSET_ADMIN_USER: "{{ vault_superset_admin_user }}"
+  SUPERSET_ADMIN_PASSWORD: "{{ vault_superset_admin_password }}"
+  SUPERSET_ADMIN_EMAIL: "{{ vault_superset_admin_email }}"
+  SUPERSET_ADMIN_FIRSTNAME: "{{ vault_superset_admin_firstname }}"
+  SUPERSET_ADMIN_LASTNAME: "{{ vault_superset_admin_lastname }}"
+  # Database connection
+  POSTGRES_DB: "{{ vault_postgres_db }}"
+  POSTGRES_USER: "{{ vault_postgres_user }}"
+  POSTGRES_PASSWORD: "{{ vault_postgres_password }}"
+  # Redis connection
+  REDIS_HOST: "redis"
+  REDIS_PORT: "{{ redis_port }}"
+  # Superset configuration
+  SUPERSET_CONFIG_PATH: "/app/pythonpath/superset_config.py"
+  # Disable telemetry (optional)
+  SCARF_ANALYTICS: "false"
+
+# Docker Compose Configuration
+docker_compose_version: "3.8"
+docker_network_name: "superset-network"
+
+# Resource Limits (optional)
+superset_memory_limit: "2g"
+superset_cpu_limit: "1.0"
+postgres_memory_limit: "1g"
+redis_memory_limit: "512m"
+
+# Backup Configuration
+backup_enabled: true
+backup_retention_days: 7
+backup_dir: "{{ superset_data_dir }}/backups"
+
+# Logging Configuration
+log_level: "INFO"
+log_file: "{{ superset_logs_dir }}/superset.log"
+
+# Security Configuration
+# Set to true to enable SSL/TLS (requires certificates)
+enable_ssl: false
+ssl_cert_file: ""
+ssl_key_file: ""
+
+# Health Check Configuration
+health_check_enabled: true
+health_check_interval: 30
+health_check_timeout: 10
+health_check_retries: 3 

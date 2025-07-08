@@ -1,0 +1,113 @@
+services:
+  postgres:
+    image: {{ postgres_image }}
+    container_name: superset-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: {{ postgres_db }}
+      POSTGRES_USER: {{ postgres_user }}
+      POSTGRES_PASSWORD: {{ postgres_password }}
+    volumes:
+      - {{ postgres_data_dir }}:/var/lib/postgresql/data
+    ports:
+      - "{{ postgres_port }}:5432"
+    networks:
+      - {{ docker_network_name }}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ postgres_user }} -d {{ postgres_db }}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: {{ postgres_memory_limit }}
+
+  redis:
+    image: {{ redis_image }}
+    container_name: superset-redis
+    restart: unless-stopped
+    ports:
+      - "{{ redis_port }}:6379"
+    volumes:
+      - {{ redis_data_dir }}:/data
+    networks:
+      - {{ docker_network_name }}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: {{ redis_memory_limit }}
+
+  superset:
+    image: {{ superset_image }}
+    container_name: superset-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+{% for key, value in superset_env_vars.items() %}
+      {{ key }}: {{ value }}
+{% endfor %}
+    volumes:
+      - {{ superset_install_dir }}/superset_config.py:{{ superset_env_vars.SUPERSET_CONFIG_PATH }}
+      - {{ superset_logs_dir }}:/app/logs
+    ports:
+      - "{{ superset_port }}:8088"
+    networks:
+      - {{ docker_network_name }}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      interval: {{ health_check_interval }}s
+      timeout: {{ health_check_timeout }}s
+      retries: {{ health_check_retries }}
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: {{ superset_memory_limit }}
+          cpus: '{{ superset_cpu_limit }}'
+
+  superset-init:
+    image: {{ superset_init_image }}
+    container_name: superset-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+{% for key, value in superset_env_vars.items() %}
+      {{ key }}: {{ value }}
+{% endfor %}
+    volumes:
+      - {{ superset_install_dir }}/superset_config.py:{{ superset_env_vars.SUPERSET_CONFIG_PATH }}
+    networks:
+      - {{ docker_network_name }}
+    command: >
+      bash -c "
+        superset db upgrade &&
+        superset fab create-admin
+          --username {{ superset_admin_user }}
+          --firstname {{ superset_admin_firstname }}
+          --lastname {{ superset_admin_lastname }}
+          --email {{ superset_admin_email }}
+          --password {{ superset_admin_password }} &&
+        {% if superset_load_examples %}
+        superset load_examples &&
+        {% endif %}
+        superset init
+      "
+    profiles:
+      - init
+
+networks:
+  {{ docker_network_name }}:
+    driver: bridge 

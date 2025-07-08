@@ -1,0 +1,174 @@
+---
+- name: Deploy Apache Superset with Docker Compose
+  hosts: superset_servers
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Update package cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Install required packages
+      package:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+          - curl
+          - wget
+          - git
+          - ca-certificates
+          - apt-transport-https
+          - gnupg
+          - lsb-release
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+      when: ansible_os_family == "Debian"
+
+    - name: Install Docker
+      package:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Create Superset directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+      loop:
+        - "{{ superset_install_dir }}"
+        - "{{ superset_data_dir }}"
+        - "{{ superset_logs_dir }}"
+        - "{{ postgres_data_dir }}"
+        - "{{ redis_data_dir }}"
+        - "{{ backup_dir }}"
+
+    - name: Copy Superset configuration
+      template:
+        src: templates/superset_config.py.j2
+        dest: "{{ superset_install_dir }}/superset_config.py"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Copy Docker Compose file
+      template:
+        src: templates/docker-compose.yml.j2
+        dest: "{{ superset_install_dir }}/docker-compose.yml"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Copy initialization script
+      copy:
+        src: ../files/init-superset.sh
+        dest: "{{ superset_install_dir }}/init-superset.sh"
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Create .env file for Docker Compose
+      template:
+        src: templates/env.j2
+        dest: "{{ superset_install_dir }}/.env"
+        mode: '0644'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Pull Docker images
+      community.docker.docker_compose_v2:
+        project_src: "{{ superset_install_dir }}"
+        pull: always
+        build: never
+
+    - name: Start Superset services
+      community.docker.docker_compose_v2:
+        project_src: "{{ superset_install_dir }}"
+        state: present
+        build: never
+
+    - name: Wait for services to be ready
+      wait_for:
+        host: "{{ ansible_host }}"
+        port: "{{ superset_port }}"
+        delay: 10
+        timeout: 300
+
+    - name: Run Superset initialization
+      community.docker.docker_compose_v2:
+        project_src: "{{ superset_install_dir }}"
+        profiles: ["init"]
+        state: present
+        build: never
+
+    - name: Verify Superset is running
+      uri:
+        url: "http://{{ ansible_host }}:{{ superset_port }}/health"
+        method: GET
+        status_code: 200
+      register: health_check
+      retries: 5
+      delay: 10
+      until: health_check.status == 200
+
+    - name: Display deployment information
+      debug:
+        msg: |
+          ========================================
+          Superset Deployment Completed Successfully!
+          ========================================
+          
+          Access URL: http://{{ ansible_host }}:{{ superset_port }}
+          Default Username: {{ superset_admin_user }}
+          Default Password: {{ superset_admin_password }}
+          
+          Installation Directory: {{ superset_install_dir }}
+          Data Directory: {{ superset_data_dir }}
+          Logs Directory: {{ superset_logs_dir }}
+          
+          PostgreSQL:
+            - Host: {{ ansible_host }}:{{ postgres_port }}
+            - Database: {{ postgres_db }}
+            - User: {{ postgres_user }}
+          
+          Redis:
+            - Host: {{ ansible_host }}:{{ redis_port }}
+          
+          ========================================
+          IMPORTANT: Change default credentials!
+          ======================================== 
