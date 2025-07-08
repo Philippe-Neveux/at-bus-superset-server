@@ -181,18 +181,11 @@ jobs:
     - name: Create vault password file
       run: |
         echo "${{ secrets.VAULT_PASSWORD }}" > /home/runner/.vault_pass
-        echo "Vault password file created at /home/runner/.vault_pass"
 
-    - name: Run Ansible Playbook Syntax Check
+    - name: Run Ansible Playbook
       run: |
-        uv run ansible-playbook --syntax-check -i inventory/hosts.yml playbooks/deploy.yml --vault-password-file /home/runner/.vault_pass
-        uv run ansible-playbook --syntax-check -i inventory/hosts.yml playbooks/backup.yml --vault-password-file /home/runner/.vault_pass
-        uv run ansible-playbook --syntax-check -i inventory/hosts.yml playbooks/restore.yml --vault-password-file /home/runner/.vault_pass
-        uv run ansible-playbook --syntax-check -i inventory/hosts.yml playbooks/update.yml --vault-password-file /home/runner/.vault_pass
-
-    - name: Deploy Superset with Ansible
-      run: |
-        uv run ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml --vault-password-file /home/runner/.vault_pass --verbose
+        make check-syntax-playbooks VAULT_PASS_FILE=/home/runner/.vault_pass
+        make deploy-superset VAULT_PASS_FILE=/home/runner/.vault_pass
 
     - name: Verify Deployment
       run: |

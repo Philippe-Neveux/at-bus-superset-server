@@ -107,6 +107,7 @@ at-bus-superset-server/
 ```bash
 git clone <your-repo-url>
 cd at-bus-superset-server
+uv sync
 ```
 
 ### 2. Install Required Collections
@@ -120,7 +121,7 @@ ansible-galaxy collection install -r requirements.yml
 ```bash
 echo "your-secure-vault-password" > .vault_pass
 chmod 600 .vault_pass
-ansible-vault edit group_vars/vault.yml
+uv run ansible-vault edit inventory/group_vars/all/vault.yml --vault-password-file .vault_pass
 ```
 
 ### 4. Update Inventory
@@ -169,7 +170,7 @@ ssh -i ~/.ssh/at-bus-superset-key at-bus-superset@34.151.111.45
 
 #### Method 3: Using Ansible Playbook
 ```bash
-ansible-playbook playbooks/setup-ssh.yml
+uv run ansible-playbook playbooks/setup-ssh.yml
 ```
 
 #### Troubleshooting SSH
@@ -213,9 +214,9 @@ vault_smtp_password: "smtp_password"
 
 ### Running Playbooks with Vault
 ```bash
-ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml --vault-password-file .vault_pass
+uv run ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml --vault-password-file .vault_pass
 # Or with interactive prompt
-ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml --ask-vault-pass
+uv run ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml --ask-vault-pass
 ```
 
 ---
@@ -291,10 +292,10 @@ make update-superset NEW_SUPERSET_VERSION=5.0.0
 
 ### Manual Ansible Commands
 ```bash
-ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml --vault-password-file .vault_pass
-ansible-playbook -i inventory/hosts.yml playbooks/backup.yml --vault-password-file .vault_pass
-ansible-playbook -i inventory/hosts.yml playbooks/restore.yml --vault-password-file .vault_pass -e "backup_to_restore=backup-name"
-ansible-playbook -i inventory/hosts.yml playbooks/update.yml --vault-password-file .vault_pass -e "new_superset_version=5.0.0"
+uv run ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml --vault-password-file .vault_pass
+uv run ansible-playbook -i inventory/hosts.yml playbooks/backup.yml --vault-password-file .vault_pass
+uv run ansible-playbook -i inventory/hosts.yml playbooks/restore.yml --vault-password-file .vault_pass -e "backup_to_restore=backup-name"
+uv run ansible-playbook -i inventory/hosts.yml playbooks/update.yml --vault-password-file .vault_pass -e "new_superset_version=5.0.0"
 ```
 
 ---
