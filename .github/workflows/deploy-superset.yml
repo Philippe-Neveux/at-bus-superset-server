@@ -166,7 +166,7 @@ jobs:
     - name: Update Ansible Inventory
       run: |
         # Update the production inventory with the current VM IP
-        cat > ansible/inventory/production.yml << EOF
+        cat > inventory/hosts.yml << EOF
         ---
         all:
           children:
