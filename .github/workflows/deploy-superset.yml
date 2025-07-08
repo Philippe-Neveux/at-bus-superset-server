@@ -184,7 +184,6 @@ jobs:
 
     - name: Run Ansible Playbook
       run: |
-        cd ansible
         make check-syntax-playbooks
         make deploy-superset
 
