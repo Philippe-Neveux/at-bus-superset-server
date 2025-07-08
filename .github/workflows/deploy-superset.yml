@@ -118,9 +118,9 @@ jobs:
     - name: Generate SSH Key Pair
       run: |
         mkdir -p ~/.ssh
-        ssh-keygen -t rsa -b 4096 -f ~/.ssh/at-bus-superset-server-key -N "" -C "github-actions@deployment"
-        chmod 600 ~/.ssh/at-bus-superset-server-key
-        chmod 644 ~/.ssh/at-bus-superset-server-key.pub
+        ssh-keygen -t rsa -b 4096 -f ~/.ssh/at-bus-superset-key -N "" -C "github-actions@deployment"
+        chmod 600 ~/.ssh/at-bus-superset-key
+        chmod 644 ~/.ssh/at-bus-superset-key.pub
         echo "SSH key pair generated successfully"
 
     - name: Get VM IP
@@ -136,19 +136,19 @@ jobs:
       run: |
         gcloud compute instances add-metadata ${{ vars.GCP_VM_INSTANCE_NAME }} \
           --zone=${{ vars.GCP_REGION_ZONE }} \
-          --metadata ssh-keys="${{ vars.GCP_SSH_USER }}:$(cat ~/.ssh/at-bus-superset-server-key.pub)"
+          --metadata ssh-keys="${{ vars.GCP_SSH_USER }}:$(cat ~/.ssh/at-bus-superset-key.pub)"
 
     - name: Wait for SSH to be ready
       run: |
         echo "Testing SSH connection with generated key..."
-        echo "SSH key location: ~/.ssh/at-bus-superset-server-key"
-        echo "SSH key permissions: $(ls -la ~/.ssh/at-bus-superset-server-key)"
+        echo "SSH key location: ~/.ssh/at-bus-superset-key"
+        echo "SSH key permissions: $(ls -la ~/.ssh/at-bus-superset-key)"
         echo "SSH public key:"
-        cat ~/.ssh/at-bus-superset-server-key.pub
+        cat ~/.ssh/at-bus-superset-key.pub
         
         for i in {1..30}; do
           echo "Attempt $i: Testing SSH connection to ${{ vars.GCP_SSH_USER }}@${{ steps.get-vm-ip.outputs.vm_ip }}"
-          if ssh -i ~/.ssh/at-bus-superset-server-key -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o UserKnownHostsFile=/dev/null \
+          if ssh -i ~/.ssh/at-bus-superset-key -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o UserKnownHostsFile=/dev/null \
              ${{ vars.GCP_SSH_USER }}@${{ steps.get-vm-ip.outputs.vm_ip }} "echo 'SSH ready'"; then
             echo "SSH connection established on attempt $i"
             break
@@ -175,7 +175,7 @@ jobs:
                 superset-server:
                   ansible_host: ${{ steps.get-vm-ip.outputs.vm_ip }}
                   ansible_user: ${{ vars.GCP_SSH_USER }}
-                  ansible_ssh_private_key_file: ~/.ssh/at-bus-superset-server-key
+                  ansible_ssh_private_key_file: ~/.ssh/at-bus-superset-key
         EOF
 
     - name: Create vault password file
@@ -191,7 +191,7 @@ jobs:
 
     - name: Verify Deployment
       run: |
-        ssh -i ~/.ssh/at-bus-superset-server-key -o StrictHostKeyChecking=no \
+        ssh -i ~/.ssh/at-bus-superset-key -o StrictHostKeyChecking=no \
           ${{ vars.GCP_SSH_USER }}@${{ steps.get-vm-ip.outputs.vm_ip }} \
           "cd /opt/superset && docker compose ps"
 
