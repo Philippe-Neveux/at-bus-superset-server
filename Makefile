@@ -8,7 +8,7 @@ check-syntax-playbooks:
 	uv run ansible-playbook --syntax-check -i inventory/hosts.yml playbooks/update.yml
 
 deploy-superset:
-	uv run ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml --vault-password-file .vault_pass --verbose
+	uv run ansible-playbook -i inventory/hosts.yml playbooks/deploy.yml --verbose
 
 backup-superset:
 	uv run ansible-playbook -i inventory/hosts.yml playbooks/backup.yml --vault-password-file .vault_pass --verbose
