@@ -13,12 +13,13 @@ A comprehensive Ansible-based deployment solution for Apache Superset, a modern 
 6. [SSH Key Setup](#ssh-key-setup)
 7. [Security with Ansible Vault](#security-with-ansible-vault)
 8. [Configuration](#configuration)
-9. [Deployment Steps](#deployment-steps)
-10. [Post-Deployment](#post-deployment)
-11. [Maintenance](#maintenance)
-12. [Troubleshooting](#troubleshooting)
-13. [Security Best Practices](#security-best-practices)
-14. [Additional Resources](#additional-resources)
+9. [CI/CD Automation with GitHub Actions](#cicd-automation-with-github-actions)
+10. [Deployment Steps](#deployment-steps)
+11. [Post-Deployment](#post-deployment)
+12. [Maintenance](#maintenance)
+13. [Troubleshooting](#troubleshooting)
+14. [Security Best Practices](#security-best-practices)
+15. [Additional Resources](#additional-resources)
 
 ---
 
@@ -127,6 +128,7 @@ uv run ansible-vault edit inventory/group_vars/all/vault.yml --vault-password-fi
 ### 4. Update Inventory
 ```bash
 nano inventory/hosts.yml
+# Note: For CI/CD deployments using GitHub Actions, this file is generated automatically.
 ```
 
 ### 5. Deploy Superset
@@ -244,6 +246,32 @@ superset_load_examples: true      # Set to false for production
 - **Authentication**: Modify `templates/superset_config.py.j2`
 - **Resource Limits**: Adjust memory and CPU limits
 - **Backup Retention**: Configure backup retention policy
+
+---
+
+## 🤖 CI/CD Automation with GitHub Actions
+
+This project includes a GitHub Actions workflow (`.github/workflows/deploy-superset.yml`) for automated deployment to a Google Cloud Platform (GCP) VM.
+
+### Workflow Overview
+- **Trigger**: Runs on push/pull_request to `main` or can be triggered manually (`workflow_dispatch`).
+- **VM Management**: Automatically checks if the target VM is running and starts it if it's stopped.
+- **Dynamic Inventory**: Generates the Ansible inventory on-the-fly using the VM's IP address.
+- **Secure SSH**: Creates a temporary SSH key for the deployment and adds it to the VM's metadata, then cleans it up afterward.
+- **Deployment**: Runs the `make deploy-superset` command to deploy Superset.
+
+### Repository Setup
+For the workflow to succeed, you must configure the following in your GitHub repository's **Settings > Secrets and variables > Actions**:
+
+#### Secrets
+- `GCP_PROJECT_ID`: Your Google Cloud Project ID.
+- `GCP_SA_KEY`: The Base64-encoded JSON key for your GCP service account.
+- `GCP_VM_INSTANCE_NAME`: The name of the target GCP VM instance.
+- `VAULT_PASSWORD`: The password for Ansible Vault.
+
+#### Variables
+- `GCP_REGION_ZONE`: The GCP zone where the VM is located (e.g., `us-central1-a`).
+- `GCP_SSH_USER`: The SSH username for the VM (e.g., `github-actions`).
 
 ---
 
