@@ -12,7 +12,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-SSH_KEY_NAME="at-bus-superset-key"
+SSH_KEY_NAME="at-bus-superset-key2"
 SSH_KEY_PATH="$HOME/.ssh/$SSH_KEY_NAME"
 TARGET_USER="at-bus-superset"
 TARGET_HOST="34.151.111.45"

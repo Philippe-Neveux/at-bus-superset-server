@@ -1,0 +1,70 @@
+---
+- name: Download Latest Superset Backup
+  hosts: superset_servers
+  gather_facts: no
+
+  vars:
+    local_backup_dir: "{{ playbook_dir }}/../backups"
+    remote_backup_parent_dir: "/opt/superset/data/backups"
+
+  tasks:
+    - name: Ensure local backup directory exists
+      become: no
+      local_action:
+        module: file
+        path: "{{ local_backup_dir }}"
+        state: directory
+        mode: '0755'
+      run_once: true
+
+    - name: Find the latest backup directory on the remote server
+      find:
+        paths: "{{ remote_backup_parent_dir }}"
+        patterns: "superset-backup-*"
+        file_type: directory
+      register: backup_dirs
+
+    - name: Set latest backup path
+      set_fact:
+        latest_backup_path: "{{ (backup_dirs.files | sort(attribute='mtime', reverse=true) | first).path }}"
+      when: backup_dirs.files | length > 0
+
+    - name: Fail if no backups found
+      fail:
+        msg: "No backups found in {{ remote_backup_parent_dir }}"
+      when: backup_dirs.files | length == 0
+
+    - name: Get backup directory name
+      set_fact:
+        backup_dir_name: "{{ latest_backup_path | basename }}"
+
+    - name: Compress the backup directory on the remote server
+      community.general.archive:
+        path: "{{ latest_backup_path }}"
+        dest: "/tmp/{{ backup_dir_name }}.tar.gz"
+        format: gz
+      register: archive_result
+
+    - name: Download the compressed backup
+      fetch:
+        src: "{{ archive_result.dest }}"
+        dest: "{{ local_backup_dir }}/"
+        flat: yes
+
+    - name: Clean up the remote archive
+      file:
+        path: "{{ archive_result.dest }}"
+        state: absent
+
+    - name: Unarchive the backup locally
+      become: no
+      local_action:
+        module: command
+        cmd: tar -xzf "{{ local_backup_dir }}/{{ backup_dir_name }}.tar.gz" -C "{{ local_backup_dir }}"
+
+    - name: Clean up the local archive
+      become: no
+      local_action:
+        module: file
+        path: "{{ local_backup_dir }}/{{ backup_dir_name }}.tar.gz"
+        state: absent

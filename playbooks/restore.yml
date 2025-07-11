@@ -71,6 +71,7 @@
 
     - name: Restore Superset configuration
       copy:
+        remote_src: yes
         src: "{{ backup_dir }}/{{ backup_to_restore }}/superset_config.py"
         dest: "{{ superset_install_dir }}/superset_config.py"
         mode: '0644'
@@ -80,6 +81,7 @@
 
     - name: Restore Docker Compose file
       copy:
+        remote_src: yes
         src: "{{ backup_dir }}/{{ backup_to_restore }}/docker-compose.yml"
         dest: "{{ superset_install_dir }}/docker-compose.yml"
         mode: '0644'
@@ -89,6 +91,7 @@
 
     - name: Restore environment file
       copy:
+        remote_src: yes
         src: "{{ backup_dir }}/{{ backup_to_restore }}/.env"
         dest: "{{ superset_install_dir }}/.env"
         mode: '0644'

@@ -27,6 +27,7 @@ id_rsa*
 *.backup
 *.bak
 *.old
+backups/*
 
 # Temporary files
 *.tmp

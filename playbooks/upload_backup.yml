@@ -1,0 +1,53 @@
+---
+- name: Upload Superset Backup
+  hosts: superset_servers
+  gather_facts: no
+
+  vars:
+    local_backup_dir: "{{ playbook_dir }}/../backups"
+    remote_backup_parent_dir: "/opt/superset/data/backups"
+
+  tasks:
+    - name: Check if local backup to upload exists
+      become: no
+      local_action:
+        module: stat
+        path: "{{ local_backup_dir }}/{{ backup_to_upload }}"
+      register: local_backup_check
+
+    - name: Fail if local backup directory doesn't exist
+      fail:
+        msg: "Local backup directory {{ local_backup_dir }}/{{ backup_to_upload }} does not exist."
+      when: not local_backup_check.stat.exists
+
+    - name: Compress the local backup directory
+      become: no
+      local_action:
+        module: community.general.archive
+        path: "{{ local_backup_dir }}/{{ backup_to_upload }}"
+        dest: "/tmp/{{ backup_to_upload }}.tar.gz"
+        format: gz
+      register: archive_result
+
+    - name: Upload the compressed backup
+      copy:
+        src: "{{ archive_result.dest }}"
+        dest: "/tmp/"
+
+    - name: Unarchive the backup on the remote server
+      unarchive:
+        src: "/tmp/{{ backup_to_upload }}.tar.gz"
+        dest: "{{ remote_backup_parent_dir }}"
+        remote_src: yes
+
+    - name: Clean up the remote archive
+      file:
+        path: "/tmp/{{ backup_to_upload }}.tar.gz"
+        state: absent
+
+    - name: Clean up the local archive
+      become: no
+      local_action:
+        module: file
+        path: "{{ archive_result.dest }}"
+        state: absent

@@ -8,10 +8,10 @@
     - group_vars/all.yml
 
   tasks:
-    - name: Create backup directory with timestamp
+    - name: Set backup variables
       set_fact:
-        backup_timestamp: "{{ ansible_date_time.iso8601 | regex_replace(':', '-') | regex_replace('\\.', '-') }}"
-        backup_path: "{{ backup_dir }}/superset-backup-{{ backup_timestamp }}"
+        backup_timestamp: "{{ ansible_date_time.iso8601 }}"
+        backup_path: "{{ backup_dir }}/superset-backup-{{ ansible_date_time.iso8601_basic_short }}"
 
     - name: Create backup directory
       file:
@@ -45,6 +45,7 @@
 
     - name: Backup Superset configuration
       copy:
+        remote_src: yes
         src: "{{ superset_install_dir }}/superset_config.py"
         dest: "{{ backup_path }}/superset_config.py"
         mode: '0644'
@@ -53,6 +54,7 @@
 
     - name: Backup Docker Compose file
       copy:
+        remote_src: yes
         src: "{{ superset_install_dir }}/docker-compose.yml"
         dest: "{{ backup_path }}/docker-compose.yml"
         mode: '0644'
@@ -61,6 +63,7 @@
 
     - name: Backup environment file
       copy:
+        remote_src: yes
         src: "{{ superset_install_dir }}/.env"
         dest: "{{ backup_path }}/.env"
         mode: '0644'
