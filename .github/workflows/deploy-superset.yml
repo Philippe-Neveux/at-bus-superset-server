@@ -181,6 +181,8 @@ jobs:
     - name: Create vault password file
       run: |
         printf "%s" "${{ secrets.VAULT_PASSWORD }}" > /home/runner/.vault_pass
+        ls -l /home/runner/.vault_pass
+        cat /home/runner/.vault_pass
 
     - name: Test vault decryption
       run: |
