@@ -178,21 +178,23 @@ jobs:
                   ansible_ssh_private_key_file: ~/.ssh/at-bus-superset-key
         EOF
 
-    - name: Create vault password file
-      run: |
-        printf "%s" "${{ secrets.VAULT_PASSWORD }}" > /home/runner/.vault_pass
-        ls -l /home/runner/.vault_pass
-        cat /home/runner/.vault_pass
+    # - name: Create vault password file
+    #   run: |
+    #     printf "%s" "${{ secrets.VAULT_PASSWORD }}" > /home/runner/.vault_pass
+    #     ls -l /home/runner/.vault_pass
+    #     cat /home/runner/.vault_pass
+
+    # - name: Create vault password file
+    #   run: echo "${{ secrets.VAULT_PASSWORD }}" > /home/runner/work/_temp/.vault-ci-pass && ANSIBLE_VAULT_PASSWORD_FILE=/home/runner/work/_temp/.vault-ci-pass
 
     - name: Test vault decryption
       run: |
-        uv run ansible-vault view inventory/group_vars/all/vault.yml --vault-password-file /home/runner/.vault_pass
+        echo "${{ secrets.VAULT_PASSWORD }}" > /home/runner/work/_temp/.vault-ci-pass && ANSIBLE_VAULT_PASSWORD_FILE=/home/runner/work/_temp/.vault-ci-pass uv run ansible-vault view inventory/group_vars/all/vault.yml
 
     - name: Run Ansible Playbook
       run: |
-        ls -l /home/runner/.vault_pass
-        make check-syntax-playbooks VAULT_PASS_FILE=/home/runner/.vault_pass
-        make deploy-superset VAULT_PASS_FILE=/home/runner/.vault_pass
+        make check-syntax-playbooks VAULT_PASS_FILE=/home/runner/work/_temp/.vault-ci-pass
+        make deploy-superset VAULT_PASS_FILE=/home/runner/work/_temp/.vault-ci-pass
 
     - name: Verify Deployment
       run: |
@@ -211,3 +213,7 @@ jobs:
       run: |
         echo "🚀 Superset deployment completed!"
         echo "🌐 Web UI: http://${{ steps.get-vm-ip.outputs.vm_ip }}:8088"
+
+    - name: Clean up
+      if: always()
+      run: rm /home/runner/work/_temp/.vault-ci-pass
