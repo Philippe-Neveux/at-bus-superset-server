@@ -130,11 +130,11 @@
         timeout: 300
 
     - name: Run Superset initialization
-      community.docker.docker_compose_v2:
-        project_src: "{{ superset_install_dir }}"
-        profiles: ["init"]
-        state: present
-        build: never
+      ansible.builtin.command:
+        cmd: docker compose run --rm superset-init
+        chdir: "{{ superset_install_dir }}"
+      register: init_result
+      changed_when: init_result.rc != 0
 
     - name: Verify Superset is running
       uri:
