@@ -34,6 +34,11 @@
         src: "{{ archive_result.dest }}"
         dest: "/tmp/"
 
+    - name: Create remote backup directory
+      file:
+        path: "{{ remote_backup_parent_dir }}"
+        state: directory
+
     - name: Unarchive the backup on the remote server
       unarchive:
         src: "/tmp/{{ backup_to_upload }}.tar.gz"
