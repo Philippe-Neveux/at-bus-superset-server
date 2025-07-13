@@ -3,8 +3,6 @@
  
 ![superset-dashboard](./docs/Superset_Dashboard.png)
 
-A comprehensive Ansible-based deployment solution for Apache Superset, a modern data exploration and visualization platform.
-
 This repository is a part of AT Bus project. This project aims to build an ELT pipeline from open source data to a dashboard in order to visualise what are the best route bus from Avondale to Sagrado Cantina, a Mexican Restaurant in K Road, Auckland, New Zealand. The open data is provided by Auckland Transport [here](https://dev-portal.at.govt.nz/api-details#api=gtfs-api&operation=get-calendars-id).
 
 All of the repositories of this project are the follow ones:
@@ -19,6 +17,8 @@ All of the repositories of this project are the follow ones:
 
 
 ---
+
+A comprehensive Ansible-based deployment solution for Apache Superset, a modern data exploration and visualization platform.
 
 ## 📚 Table of Contents
 1. [Overview](#overview)
